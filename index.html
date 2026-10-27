@@ -517,9 +517,9 @@
       document.body.append(picker);
       let pickerIndex = -1;
 
-      function render() {
+      function render(preserveControls = false) {
         const computed = computeDays();
-        grid.innerHTML = dates.map((date, index) => {
+        const markup = dates.map((date, index) => {
           const key = dateKeys[index];
           const state = dayStates[index];
           const result = computed[index];
@@ -555,9 +555,27 @@
           </article>`;
         }).join("");
 
-        grid.querySelectorAll('[data-field="memo"]').forEach((control, index) => {
-          control.value = dayStates[index].memo;
-        });
+        if (preserveControls) {
+          const template = document.createElement("template");
+          template.innerHTML = markup;
+          Array.from(grid.children).forEach((card, index) => {
+            const updated = template.content.children[index];
+            card.className = updated.className;
+            card.querySelector(".rank-value").replaceWith(updated.querySelector(".rank-value"));
+            card.querySelector(".result").replaceWith(updated.querySelector(".result"));
+            card.querySelectorAll("select").forEach((control) => {
+              const nextControl = updated.querySelector(`select[data-field="${control.dataset.field}"]`);
+              control.value = nextControl.value;
+              control.disabled = nextControl.disabled;
+              Object.assign(control.dataset, nextControl.dataset);
+            });
+          });
+        } else {
+          grid.innerHTML = markup;
+          grid.querySelectorAll('[data-field="memo"]').forEach((control, index) => {
+            control.value = dayStates[index].memo;
+          });
+        }
         renderSummary();
       }
 
@@ -763,9 +781,7 @@
           state.meter = state.ticket ? 0 : Number(control.value);
         }
         save();
-        const focusDate = control.dataset.date;
-        render();
-        grid.querySelector(`select[data-date="${focusDate}"][data-field="${field}"]`)?.focus();
+        render(true);
       });
 
       document.getElementById("copySummary").addEventListener("click", async (event) => {
