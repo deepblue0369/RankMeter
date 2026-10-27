@@ -1,0 +1,818 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#eef2e9">
+  <title>ランク計算表</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #1d3129;
+      --muted: #64746b;
+      --line: #d7dfd4;
+      --paper: #f3f6ef;
+      --surface: #fffefa;
+      --green: #245b45;
+      --green-soft: #e8f1e8;
+      --lime: #d8ec72;
+      --coral: #c65e48;
+      --coral-soft: #fbede8;
+      --blue: #47728a;
+      --blue-soft: #eaf2f6;
+      --shadow: 0 2px 8px rgba(29, 49, 41, .05);
+      font-family: "Yu Gothic UI", "BIZ UDPGothic", "Meiryo", sans-serif;
+      color: var(--ink);
+      background: var(--paper);
+      font-synthesis: none;
+      text-rendering: optimizeLegibility;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-width: 320px;
+      min-height: 100vh;
+      background-color: var(--paper);
+      background-image: linear-gradient(rgba(36, 91, 69, .035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(36, 91, 69, .035) 1px, transparent 1px);
+      background-size: 30px 30px;
+    }
+
+    button, select { font: inherit; }
+
+    .page {
+      width: min(100% - 40px, 1580px);
+      margin: 0 auto;
+      padding: 34px 0 52px;
+    }
+
+    .masthead {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 24px;
+      padding: 0 2px 22px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .title-block { display: flex; align-items: center; gap: 15px; }
+
+    .mark {
+      display: grid;
+      width: 43px;
+      height: 43px;
+      place-items: center;
+      border-radius: 12px 12px 12px 4px;
+      background: var(--green);
+      color: var(--lime);
+      font-size: 18px;
+      font-weight: 800;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 25px;
+      font-weight: 750;
+      line-height: 1.25;
+    }
+
+    .eyebrow {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 750;
+      letter-spacing: 1.5px;
+    }
+
+    .period {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 5px;
+      text-align: right;
+    }
+
+    .period-label { color: var(--muted); font-size: 11px; font-weight: 650; }
+    .period-dates { font-size: 17px; font-weight: 750; font-variant-numeric: tabular-nums; }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      min-height: 54px;
+    }
+
+    .toolbar-note, .save-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .file-actions { display: flex; justify-content: flex-end; gap: 8px; margin-left: auto; }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 0 3px var(--green-soft);
+    }
+
+    .calendar-frame {
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      background: rgba(255, 254, 250, .55);
+      box-shadow: var(--shadow);
+    }
+
+    .weekdays, .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+    }
+
+    .weekdays {
+      padding: 0 10px;
+      border-bottom: 1px solid var(--line);
+      background: #e9eee5;
+    }
+
+    .weekday {
+      padding: 12px 10px 11px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 750;
+    }
+
+    .weekday:nth-child(7), .day-card.sunday .day-number { color: var(--coral); }
+    .weekday:nth-child(6), .day-card.saturday .day-number { color: var(--blue); }
+
+    .calendar-grid { gap: 1px; padding: 1px; background: var(--line); }
+
+    .day-card {
+      min-width: 0;
+      min-height: 0;
+      padding: 12px 11px 11px;
+      background: var(--surface);
+    }
+
+    .day-card.rank-set { background: #edf6e9; box-shadow: inset 4px 0 0 var(--green); }
+    .day-card.ticket-set { background: var(--coral-soft); }
+
+    .day-heading {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      min-height: 56px;
+      align-items: center;
+      gap: 5px;
+      margin-bottom: 9px;
+    }
+
+    .day-date { display: flex; align-items: baseline; gap: 5px; min-width: 0; }
+    .day-number { font-size: 18px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+    .day-month { color: var(--muted); font-size: 10px; overflow-wrap: anywhere; }
+
+    .field { display: block; margin-top: 8px; }
+
+    select {
+      display: block;
+      width: 100%;
+      min-width: 0;
+      height: 26px;
+      padding: 0 24px 0 8px;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      outline: none;
+      background-color: #fff;
+      color: var(--ink);
+      font-size: 11px;
+      font-weight: 650;
+      text-overflow: ellipsis;
+    }
+
+    select:focus-visible { border-color: var(--green); box-shadow: 0 0 0 3px rgba(36, 91, 69, .15); }
+
+    .day-memo {
+      display: block; width: 100%; min-width: 0; min-height: 54px;
+      padding: 6px 8px; border: 1px solid var(--line); border-radius: 4px;
+      background: white; color: var(--ink); font: inherit; font-size: 12px;
+      line-height: 1.5; resize: vertical;
+    }
+    .day-memo:focus-visible { outline: 2px solid var(--green); outline-offset: -2px; }
+    .day-memo::placeholder { color: #b6bdb8; font-size: 10px; font-weight: 400; opacity: 1; }
+
+    .rank-trigger {
+      width: 100%; min-width: 0; min-height: 33px; padding: 6px 8px;
+      border: 1px solid var(--line); border-radius: 4px; background: white;
+      color: var(--ink); text-align: left; font-size: 11px; cursor: pointer;
+      overflow-wrap: anywhere;
+    }
+    .day-date.rank-trigger {
+      width: auto; min-height: 32px; padding: 4px; border: 0;
+      background: transparent; border-radius: 3px;
+      flex-direction: column; align-items: flex-start;
+    }
+    .day-date.rank-trigger:hover { background: var(--green-soft); }
+    .day-card.today .day-date.rank-trigger { background: var(--lime); }
+    .rank-value {
+      display: block; min-width: 0; min-height: 1.5em; font-size: 10px; font-weight: 650;
+      justify-self: end; align-self: start; max-width: 100%; padding: 3px 4px;
+      border: 1px solid #bed3c2; border-radius: 4px; background: var(--green-soft);
+      text-align: center; overflow-wrap: anywhere; color: var(--green);
+    }
+    .rank-value:empty { display: none; }
+    .rank-value[data-rank$="1"] { background: #edf0f3; border-color: #cbd2d9; }
+    .rank-value[data-rank$="2"] { background: #e3f0fc; border-color: #b6cfe5; }
+    .rank-value[data-rank$="3"] { background: #fff1c9; border-color: #dfcd94; }
+    .rank-value .rank-points { font-size: 8px; font-weight: 400; }
+    .rank-picker {
+      position: fixed; inset: auto; margin: 0; padding: 8px;
+      width: 360px; max-width: calc(100vw - 16px); max-height: calc(100dvh - 16px);
+      overflow: auto; border: 1px solid var(--line); border-radius: 6px;
+      background: white; color: var(--ink); box-shadow: 0 8px 28px #0003;
+    }
+    .rank-picker-columns { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 8px; }
+    .rank-picker button {
+      display: block; width: 100%; min-height: 36px; border: 0;
+      border-radius: 3px; padding: 6px 10px; text-align: left;
+      background: transparent; color: var(--ink); cursor: pointer;
+    }
+    .rank-picker button:hover, .rank-picker button[aria-expanded="true"] { background: var(--green-soft); }
+    .rank-picker button:focus-visible, .rank-trigger:focus-visible { outline: 2px solid var(--green); outline-offset: -2px; }
+    .point-submenu { border-left: 1px solid var(--line); padding-left: 8px; }
+    .submenu-title { margin: 4px 0 8px; color: var(--muted); font-size: 12px; }
+    .rank-picker .point-submenu button { display: grid; grid-template-columns: 24px minmax(0, 1fr); align-items: center; gap: 6px; }
+    .rank-picker .point-note { color: var(--muted); font-size: 9px; font-weight: 400; line-height: 1.5; }
+
+    .ticket-select[data-ticket=""], .ticket-select option[value=""] { color: var(--muted); font-weight: 400; }
+    .ticket-select option:not([value=""]) { color: var(--ink); font-weight: 650; }
+    .ticket-select[data-ticket="oyachike"] { border-color: #e7c779; background-color: #fff9e8; }
+    .ticket-select[data-ticket="purechike"] { border-color: #b7c8df; background-color: #f1f5fb; }
+    .ticket-select[data-ticket="off"] { border-color: #c3d8d0; background-color: #edf5f1; }
+    select[data-field="meter"][data-positive="true"] { background-color: #e3f0fc; }
+    select[data-field="meter"][data-negative="true"] { background-color: #fbe5e1; }
+    select[data-field="meter"] option { color: var(--ink); }
+
+    .result {
+      margin-top: 11px;
+      padding: 9px 9px 8px;
+      border-radius: 5px;
+      background: var(--green-soft);
+    }
+
+    .result.warning { background: var(--coral-soft); }
+    .result.rank-up { background: var(--lime); }
+    .result.rank-down { background: #f8d9d4; }
+    .result.rank-down .result-rank, .result.rank-down .result-change { color: #8b3328; }
+    .result-label { display: block; color: var(--muted); font-size: 9px; font-weight: 750; }
+    .result-main { display: flex; align-items: baseline; justify-content: space-between; gap: 4px; margin-top: 2px; }
+    .result-rank { font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .result-rank .rank-points { font-size: 10px; font-weight: 400; }
+    .result-change { color: var(--green); font-size: 9px; font-weight: 750; text-align: right; }
+    .warning .result-rank, .warning .result-change { color: var(--coral); }
+
+    .toolbar { flex-wrap: wrap; padding: 6px 0; }
+    .clear-settings {
+      min-height: 40px; padding: 6px 12px; border: 1px solid var(--coral);
+      border-radius: 4px; background: var(--surface); color: #8b3328;
+      font-size: 12px; cursor: pointer;
+    }
+    .clear-settings:hover { background: var(--coral-soft); }
+    .clear-settings:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+
+    .ticket-summary { margin-top: 20px; padding: 16px 2px 0; border-top: 1px solid var(--line); }
+    .ticket-summary h2 { margin: 0 0 10px; font-size: 16px; }
+    .summary-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 10px; }
+    .summary-heading h2 { margin: 0; }
+    .copy-summary {
+      min-height: 40px; padding: 6px 12px; border: 1px solid var(--green);
+      border-radius: 4px; background: var(--surface); color: var(--green);
+      font: inherit; font-size: 12px; cursor: pointer;
+    }
+    .copy-summary:hover { background: var(--green-soft); }
+    .copy-summary:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+    .copy-status { color: var(--muted); font-size: 12px; }
+    .summary-text { min-height: 240px; }
+
+    .footer-note {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 13px 3px 0;
+      color: var(--muted);
+      font-size: 10px;
+      line-height: 1.6;
+    }
+
+    @media (max-width: 1024px) {
+      select { height: 30px; font-size: 16px; }
+      .day-memo { font-size: 16px; }
+      .result-main { flex-wrap: wrap; }
+    }
+
+    @media (max-width: 1024px) and (orientation: portrait) {
+      .page { width: min(100% - 28px, 680px); padding-top: 24px; }
+      .weekdays { display: none; }
+      .calendar-grid { grid-template-columns: 1fr; }
+      .day-card { min-height: 0; padding: 14px 15px; }
+      .day-heading { min-height: 40px; margin-bottom: 4px; }
+    }
+
+    @media (max-width: 1024px) and (orientation: landscape) {
+      .page { width: calc(100% - 24px); padding-top: 12px; }
+      .masthead { padding-bottom: 10px; }
+      .toolbar { min-height: 38px; }
+      .weekdays { padding: 0; }
+      .weekday { padding: 8px 4px; font-size: 10px; }
+      .day-card { padding: 8px 5px; }
+      .day-heading { gap: 2px; margin-bottom: 4px; }
+      .day-date.rank-trigger { padding: 2px; }
+      .day-month { font-size: 9px; }
+      select { padding: 0 2px; }
+      .result { padding: 7px 4px; }
+      .result-rank { font-size: 13px; white-space: normal; overflow-wrap: anywhere; }
+    }
+
+    @media (max-width: 520px) {
+      .page { width: min(100% - 20px, 440px); padding-top: 17px; }
+      .masthead { align-items: flex-start; gap: 10px; padding-bottom: 16px; }
+      .title-block { gap: 10px; }
+      .mark { width: 37px; height: 37px; border-radius: 10px 10px 10px 3px; font-size: 16px; }
+      h1 { font-size: 20px; }
+      .eyebrow { font-size: 8px; letter-spacing: 1px; }
+      .period { gap: 3px; padding-top: 3px; }
+      .period-label { font-size: 9px; }
+      .period-dates { font-size: 12px; }
+      .toolbar { min-height: 46px; }
+      .toolbar-note, .save-status { gap: 6px; font-size: 10px; }
+      .footer-note { flex-direction: column; gap: 2px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="masthead">
+      <div class="title-block">
+        <div class="mark" aria-hidden="true">R</div>
+        <div>
+          <span class="eyebrow">RANK METER / FORECAST</span>
+          <h1>ランク計算表</h1>
+        </div>
+      </div>
+      <div class="period" aria-live="polite">
+        <span class="period-label">表示期間・4週間</span>
+        <strong class="period-dates" id="periodDates"></strong>
+      </div>
+    </header>
+
+    <div class="toolbar">
+      <div class="toolbar-note"><span class="dot" aria-hidden="true"></span><span>月曜日始まり・28日間</span></div>
+      <div class="save-status" id="saveStatus" role="status" aria-live="polite">日付ごとの設定をこの端末に保存</div>
+      <div class="file-actions">
+        <button type="button" class="copy-summary" id="exportSettings">ファイル保存</button>
+        <button type="button" class="copy-summary" id="importSettings">ファイル読込</button>
+        <button type="button" class="clear-settings" id="clearSettings">設定クリア</button>
+        <input type="file" id="settingsFile" accept=".json,application/json" hidden>
+      </div>
+    </div>
+
+    <section class="calendar-frame" aria-label="4週間のランク予測カレンダー">
+      <div class="weekdays" aria-hidden="true">
+        <div class="weekday">月曜日</div>
+        <div class="weekday">火曜日</div>
+        <div class="weekday">水曜日</div>
+        <div class="weekday">木曜日</div>
+        <div class="weekday">金曜日</div>
+        <div class="weekday">土曜日</div>
+        <div class="weekday">日曜日</div>
+      </div>
+      <div class="calendar-grid" id="calendarGrid"></div>
+    </section>
+
+    <section class="ticket-summary" aria-labelledby="summaryHeading">
+      <div class="summary-heading">
+        <h2 id="summaryHeading">サマリ</h2>
+        <button type="button" class="copy-summary" id="copySummary">コピー</button>
+        <span class="copy-status" id="copyStatus" role="status" aria-live="polite"></span>
+      </div>
+      <textarea class="day-memo summary-text" id="ticketSummary" rows="12" readonly aria-label="今日以降のサマリ"></textarea>
+    </section>
+
+    <footer class="footer-note">
+      <span>チケットを選択した日は0ptとして計算</span>
+      <span>最上位・最下位での超過はランク範囲内に制限</span>
+    </footer>
+  </main>
+
+  <script>
+    (() => {
+      const ranks = ["D1", "D2", "D3", "C1", "C2", "C3", "B1", "B2", "B3", "A1", "A2", "A3"];
+      const points = [-2, -1, 0, 1, 2];
+      const meters = [-1, 0, 1, 2];
+      const tickets = ["", "oyachike", "purechike", "off"];
+      const ticketNames = { "": "なし", oyachike: "おやチケ", purechike: "プレチケ", off: "オフの日" };
+      const storageKey = "rank-meter-calendar-v1";
+      const grid = document.getElementById("calendarGrid");
+      const saveStatus = document.getElementById("saveStatus");
+      const pad = (value) => String(value).padStart(2, "0");
+      const isoDate = (date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+      const signed = (value) => value > 0 ? `+${value}` : String(value);
+      const rankText = (rank) => `${ranks[rank.index]}(${rank.points === 0 ? "±0" : signed(rank.points)})`;
+      const mondayOf = (date) => {
+        const monday = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+        monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
+        return monday;
+      };
+      const startDate = mondayOf(new Date());
+      const dates = Array.from({ length: 28 }, (_, index) => {
+        const date = new Date(startDate);
+        date.setDate(startDate.getDate() + index);
+        return date;
+      });
+      const dateKeys = dates.map(isoDate);
+      const todayKey = isoDate(new Date());
+      const weekdaysJa = ["日", "月", "火", "水", "木", "金", "土"];
+
+      function formatPeriodDate(date) {
+        return `${date.getFullYear()}/${pad(date.getMonth() + 1)}/${pad(date.getDate())}`;
+      }
+
+      document.getElementById("periodDates").textContent = `${formatPeriodDate(dates[0])} - ${formatPeriodDate(dates[27])}`;
+
+      function loadSettings() {
+        try {
+          const parsed = JSON.parse(localStorage.getItem(storageKey) || "{}");
+          return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+        } catch {
+          return {};
+        }
+      }
+
+      const settings = loadSettings();
+
+      function defaultState(index) {
+        return { rankMode: index === 0 ? "manual" : "inherit", rankIndex: 0, rankPoints: 0, ticket: "", meter: -1, memo: "" };
+      }
+
+      function stateFor(dateKey, index) {
+        const stored = settings[dateKey];
+        const fallback = defaultState(index);
+        if (!stored || typeof stored !== "object") return fallback;
+        const rankIndex = Number.isInteger(stored.rankIndex) && stored.rankIndex >= 0 && stored.rankIndex < ranks.length ? stored.rankIndex : fallback.rankIndex;
+        const rankPoints = points.includes(stored.rankPoints) ? stored.rankPoints : fallback.rankPoints;
+        const ticket = tickets.includes(stored.ticket) ? stored.ticket : fallback.ticket;
+        const meter = ticket ? 0 : meters.includes(stored.meter) ? stored.meter : fallback.meter;
+        const memo = typeof stored.memo === "string" ? stored.memo : "";
+        let rankMode = stored.rankMode === "manual" ? "manual" : "inherit";
+        if (index === 0) rankMode = "manual";
+        return { rankMode, rankIndex, rankPoints, ticket, meter, memo };
+      }
+
+      const dayStates = dateKeys.map((key, index) => stateFor(key, index));
+      let selectedRankDate = "";
+      try {
+        const storedDate = localStorage.getItem(`${storageKey}-rank-date`);
+        if (dateKeys.includes(storedDate)) selectedRankDate = storedDate;
+      } catch {}
+
+      function calculateNext(rank, delta) {
+        const total = rank.points + delta;
+        if (total >= 3) {
+          if (rank.index === ranks.length - 1) return { index: rank.index, points: 2, boundary: "上限", moved: 0 };
+          return { index: rank.index + 1, points: 0, boundary: "", moved: 1 };
+        }
+        if (total <= -3) {
+          if (rank.index === 0) return { index: 0, points: -2, boundary: "下限", moved: 0 };
+          return { index: rank.index - 1, points: 0, boundary: "", moved: -1 };
+        }
+        return { index: rank.index, points: total, boundary: "", moved: 0 };
+      }
+
+      function computeDays() {
+        const computed = [];
+        const startIndex = dateKeys.indexOf(selectedRankDate);
+        dayStates.forEach((state, index) => {
+          const previous = index > 0 ? computed[index - 1].next : null;
+          const current = startIndex < 0 || index < startIndex ? null
+            : index === startIndex ? { index: state.rankIndex, points: state.rankPoints }
+              : previous;
+          const applied = state.ticket ? 0 : state.meter;
+          computed.push({ current, applied, next: current ? calculateNext(current, applied) : null });
+        });
+        return computed;
+      }
+
+      const picker = document.createElement("div");
+      picker.className = "rank-picker";
+      picker.id = "rankPicker";
+      picker.setAttribute("popover", "auto");
+      picker.setAttribute("role", "dialog");
+      picker.setAttribute("aria-label", "ランクとポイントの選択");
+      document.body.append(picker);
+      let pickerIndex = -1;
+
+      function render() {
+        const computed = computeDays();
+        grid.innerHTML = dates.map((date, index) => {
+          const key = dateKeys[index];
+          const state = dayStates[index];
+          const result = computed[index];
+          const dayOfWeek = date.getDay();
+          const inherited = index > 0 && state.rankMode === "inherit";
+          const currentRankLabel = selectedRankDate === key ? `${rankText(result.current)}${inherited ? "（引継ぎ）" : ""}` : "";
+          const dayRankPoints = result.current ? (result.current.points === 0 ? "±0" : signed(result.current.points)) : "";
+          const dayRankLabel = result.current ? `${ranks[result.current.index]} ${dayRankPoints}` : "";
+          const output = result.next ? `${ranks[result.next.index]} <span class="rank-points">${result.next.points === 0 ? "±0" : signed(result.next.points)}</span>` : "";
+          const movement = !result.next ? "" : result.next.moved > 0 ? "1ランク上昇" : result.next.moved < 0 ? "1ランク下降" : result.next.boundary;
+          const classes = ["day-card", dayOfWeek === 0 ? "sunday" : "", dayOfWeek === 6 ? "saturday" : "", key === todayKey ? "today" : "", currentRankLabel ? "rank-set" : "", state.ticket ? "ticket-set" : ""].filter(Boolean).join(" ");
+          const dateLabel = `${date.getMonth() + 1}/${date.getDate()}`;
+          const ticketOptions = tickets.map((ticket) => `<option value="${ticket}"${ticket === state.ticket ? " selected" : ""}>${ticketNames[ticket]}</option>`).join("");
+          const meterOptions = meters.map((meter) => `<option value="${meter}"${meter === state.meter ? " selected" : ""}>${meter === 0 ? "±0" : signed(meter)}</option>`).join("");
+          return `<article class="${classes}" data-date="${key}">
+            <header class="day-heading">
+              <button type="button" class="day-date rank-trigger" data-field="rank" data-date="${key}"${key === todayKey ? ' aria-current="date"' : ""} aria-label="${dateLabel}の現在のランクを選択 ${currentRankLabel || "未設定"}" title="現在のランクを選択" aria-haspopup="dialog" aria-controls="rankPicker" aria-expanded="false"><span class="day-number">${date.getDate()}</span><span class="day-month">${dateLabel}（${weekdaysJa[dayOfWeek]}）</span></button>
+              <span class="rank-value" data-rank="${result.current ? ranks[result.current.index] : ""}" aria-label="当日のランク ${dayRankLabel || "未設定"}">${result.current ? `${ranks[result.current.index]} <span class="rank-points">${dayRankPoints}</span>` : ""}</span>
+            </header>
+            <label class="field">
+              <select class="ticket-select" data-field="ticket" data-date="${key}" data-ticket="${state.ticket}" aria-label="${dateLabel}のチケット">${ticketOptions}</select>
+            </label>
+            <label class="field">
+              <select data-field="meter" data-date="${key}" data-positive="${state.meter > 0}" data-negative="${state.meter < 0}" aria-label="${dateLabel}の獲得ポイント予測"${state.ticket ? " disabled" : ""}>${meterOptions}</select>
+            </label>
+            <label class="field">
+              <textarea class="day-memo" data-field="memo" data-date="${key}" rows="2" placeholder="メモ" aria-label="${dateLabel}のメモ"></textarea>
+            </label>
+            <div class="result${result.next?.boundary ? " warning" : ""}${result.next?.moved > 0 ? " rank-up" : result.next?.moved < 0 ? " rank-down" : ""}" aria-live="polite">
+              <span class="result-label">翌日の予測ランク</span>
+              <div class="result-main"><strong class="result-rank">${output}</strong><span class="result-change">${movement}</span></div>
+            </div>
+          </article>`;
+        }).join("");
+
+        grid.querySelectorAll('[data-field="memo"]').forEach((control, index) => {
+          control.value = dayStates[index].memo;
+        });
+        renderSummary();
+      }
+
+      function renderSummary() {
+        const summaryLines = dayStates.flatMap((state, index) => {
+          if (dateKeys[index] < todayKey) return [];
+          const date = dates[index];
+          const dateLabel = `${pad(date.getDate())}日(${weekdaysJa[date.getDay()]})`;
+          return [[dateLabel, state.ticket ? ticketNames[state.ticket] : "", state.memo.trim()].filter(Boolean).join(" ")];
+        });
+        document.getElementById("ticketSummary").value = summaryLines.join("\n");
+      }
+
+      function finishRankSelection() {
+        picker.hidePopover();
+        save();
+        render();
+        grid.querySelector(`[data-date="${dateKeys[pickerIndex]}"][data-field="rank"]`).focus();
+      }
+
+      grid.addEventListener("click", (event) => {
+        const trigger = event.target.closest('[data-field="rank"]');
+        if (!trigger) return;
+        picker.hidePopover();
+        pickerIndex = dateKeys.indexOf(trigger.dataset.date);
+        picker.innerHTML = `${pickerIndex > 0 && computeDays()[pickerIndex - 1].next ? '<button type="button" data-inherit>前日の予測から引継ぎ</button>' : ""}
+          ${selectedRankDate ? '<button type="button" data-change-date>別の日のランクを選択</button>' : ""}
+          <div class="rank-picker-columns">
+            <div>${ranks.map((rank, rankIndex) => `<button type="button" data-rank-index="${rankIndex}" aria-expanded="false" aria-controls="pointSubmenu">${rank} ›</button>`).join("")}</div>
+            <div class="point-submenu" id="pointSubmenu" hidden></div>
+          </div>`;
+        picker.showPopover();
+        const bounds = trigger.getBoundingClientRect();
+        picker.style.left = `${Math.max(8, Math.min(bounds.left, innerWidth - picker.offsetWidth - 8))}px`;
+        picker.style.top = `${Math.max(8, Math.min(bounds.bottom + 4, innerHeight - picker.offsetHeight - 8))}px`;
+        trigger.setAttribute("aria-expanded", "true");
+        picker.querySelector("button").focus();
+      });
+
+      picker.addEventListener("click", (event) => {
+        const button = event.target.closest("button");
+        if (!button) return;
+        const state = dayStates[pickerIndex];
+        if (button.hasAttribute("data-change-date")) {
+          selectedRankDate = "";
+          finishRankSelection();
+        } else if (button.hasAttribute("data-inherit")) {
+          state.rankMode = "inherit";
+          finishRankSelection();
+        } else if (button.hasAttribute("data-rank-index")) {
+          const rankIndex = Number(button.dataset.rankIndex);
+          picker.querySelectorAll("[data-rank-index]").forEach((rankButton) => rankButton.setAttribute("aria-expanded", String(rankButton === button)));
+          const submenu = picker.querySelector(".point-submenu");
+          submenu.hidden = false;
+          submenu.innerHTML = `<p class="submenu-title">${ranks[rankIndex]}のポイント</p>${points.map((point) => {
+            const note = point < 0
+              ? rankIndex === 0 ? "下限ランク" : `あと${signed(-3 - point)}でランクダウン`
+              : rankIndex === ranks.length - 1 ? "上限ランク" : `あと${signed(3 - point)}でランクアップ`;
+            return `<button type="button" data-point="${point}" data-selected-rank="${rankIndex}"><span>${point === 0 ? "±0" : signed(point)}</span><small class="point-note">(${note})</small></button>`;
+          }).join("")}`;
+          submenu.querySelector("button").focus();
+        } else if (button.hasAttribute("data-point")) {
+          state.rankMode = "manual";
+          state.rankIndex = Number(button.dataset.selectedRank);
+          state.rankPoints = Number(button.dataset.point);
+          selectedRankDate = dateKeys[pickerIndex];
+          finishRankSelection();
+        }
+      });
+
+      picker.addEventListener("keydown", (event) => {
+        if (event.key === "ArrowLeft" && event.target.hasAttribute("data-point")) {
+          event.preventDefault();
+          picker.querySelector('[data-rank-index][aria-expanded="true"]').focus();
+        } else if (event.key === "ArrowRight" && event.target.hasAttribute("data-rank-index")) {
+          event.preventDefault();
+          event.target.click();
+        } else if (event.key === "Escape") {
+          event.preventDefault();
+          picker.hidePopover();
+          grid.querySelector(`[data-date="${dateKeys[pickerIndex]}"][data-field="rank"]`).focus();
+        }
+      });
+
+      picker.addEventListener("toggle", () => {
+        grid.querySelectorAll('[data-field="rank"]').forEach((trigger) => trigger.setAttribute("aria-expanded", String(picker.matches(":popover-open") && trigger.dataset.date === dateKeys[pickerIndex])));
+      });
+
+      function save() {
+        dateKeys.forEach((key, index) => { settings[key] = dayStates[index]; });
+        try {
+          localStorage.setItem(storageKey, JSON.stringify(settings));
+          localStorage.setItem(`${storageKey}-rank-date`, selectedRankDate);
+          saveStatus.textContent = "変更を保存しました";
+          return true;
+        } catch {
+          saveStatus.textContent = "このブラウザーでは設定を保存できません";
+          return false;
+        }
+      }
+
+      function isSettingsDate(value) {
+        return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)
+          && isoDate(new Date(`${value}T00:00:00`)) === value;
+      }
+
+      document.getElementById("exportSettings").addEventListener("click", () => {
+        try {
+          const days = {};
+          Object.keys(settings).forEach((key) => {
+            if (isSettingsDate(key)) days[key] = stateFor(key, -1);
+          });
+          dateKeys.forEach((key, index) => { days[key] = dayStates[index]; });
+          const data = { app: "rank-meter-calendar", version: 1, exportedAt: new Date().toISOString(), selectedRankDate, days };
+          const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json;charset=utf-8" });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = `rank-settings-${isoDate(new Date())}.json`;
+          document.body.append(link);
+          link.click();
+          link.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 60000);
+          saveStatus.textContent = "設定ファイルを作成しました";
+        } catch {
+          saveStatus.textContent = "設定ファイルを作成できませんでした";
+        }
+      });
+
+      const settingsFile = document.getElementById("settingsFile");
+      document.getElementById("importSettings").addEventListener("click", () => {
+        settingsFile.value = "";
+        settingsFile.click();
+      });
+
+      settingsFile.addEventListener("change", async () => {
+        const file = settingsFile.files[0];
+        if (!file) return;
+        let data;
+        try {
+          data = JSON.parse(await file.text());
+          if (!data || data.app !== "rank-meter-calendar" || data.version !== 1
+            || !data.days || typeof data.days !== "object" || Array.isArray(data.days)
+            || typeof data.selectedRankDate !== "string") throw new Error("Invalid format");
+          Object.entries(data.days).forEach(([key, state]) => {
+            if (!isSettingsDate(key) || !state || typeof state !== "object" || Array.isArray(state)
+              || !["manual", "inherit"].includes(state.rankMode)
+              || !Number.isInteger(state.rankIndex) || state.rankIndex < 0 || state.rankIndex >= ranks.length
+              || !points.includes(state.rankPoints) || !tickets.includes(state.ticket)
+              || !meters.includes(state.meter) || typeof state.memo !== "string") throw new Error("Invalid day");
+          });
+          if (data.selectedRankDate !== "" && (!isSettingsDate(data.selectedRankDate)
+            || !Object.prototype.hasOwnProperty.call(data.days, data.selectedRankDate))) throw new Error("Invalid selected date");
+        } catch {
+          saveStatus.textContent = "読み込めません。この計算表の有効な設定JSONファイルを選択してください";
+          settingsFile.value = "";
+          return;
+        }
+        settingsFile.value = "";
+        if (!confirm("現在の保存設定を、選択したファイルの内容に置き換えます。よろしいですか？")) return;
+        picker.hidePopover();
+        Object.keys(settings).forEach((key) => { delete settings[key]; });
+        Object.entries(data.days).forEach(([key, state]) => {
+          settings[key] = {
+            rankMode: state.rankMode, rankIndex: state.rankIndex, rankPoints: state.rankPoints,
+            ticket: state.ticket, meter: state.ticket ? 0 : state.meter, memo: state.memo
+          };
+        });
+        dayStates.forEach((state, index) => { dayStates[index] = stateFor(dateKeys[index], index); });
+        selectedRankDate = dateKeys.includes(data.selectedRankDate) ? data.selectedRankDate : "";
+        render();
+        document.getElementById("copyStatus").textContent = "";
+        if (save()) {
+          saveStatus.textContent = data.selectedRankDate && !selectedRankDate
+            ? "読み込みました。ランク指定日が表示期間外のため、日付からランクを指定してください"
+            : "設定ファイルを読み込みました";
+        } else {
+          saveStatus.textContent = "画面に読み込みましたが、このブラウザーには保存できません";
+        }
+      });
+
+      grid.addEventListener("input", (event) => {
+        const control = event.target;
+        if (control.dataset.field !== "memo") return;
+        const index = dateKeys.indexOf(control.dataset.date);
+        if (index < 0) return;
+        dayStates[index].memo = control.value;
+        save();
+        renderSummary();
+      });
+
+      grid.addEventListener("change", (event) => {
+        const control = event.target;
+        const field = control.dataset.field;
+        if (!field || field === "memo") return;
+        const index = dateKeys.indexOf(control.dataset.date);
+        if (index < 0) return;
+        const state = dayStates[index];
+        if (field === "ticket") {
+          state.ticket = control.value;
+          if (state.ticket) state.meter = 0;
+        } else if (field === "meter") {
+          state.meter = state.ticket ? 0 : Number(control.value);
+        }
+        save();
+        const focusDate = control.dataset.date;
+        render();
+        grid.querySelector(`select[data-date="${focusDate}"][data-field="${field}"]`)?.focus();
+      });
+
+      document.getElementById("copySummary").addEventListener("click", async (event) => {
+        const button = event.currentTarget;
+        const summary = document.getElementById("ticketSummary");
+        const status = document.getElementById("copyStatus");
+        const text = summary.value;
+        button.disabled = true;
+        status.textContent = "";
+        let copied = false;
+        try {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(text);
+            copied = true;
+          }
+        } catch {}
+        if (!copied) {
+          summary.focus({ preventScroll: true });
+          summary.select();
+          summary.setSelectionRange(0, text.length);
+          try {
+            copied = document.execCommand("copy");
+          } catch {}
+        }
+        button.disabled = false;
+        status.textContent = copied ? "コピーしました" : "自動コピーできませんでした。選択したテキストを手動でコピーしてください";
+        if (copied) button.focus({ preventScroll: true });
+      });
+
+      document.getElementById("clearSettings").addEventListener("click", () => {
+        if (!confirm("過去の日付を含むすべてのランク・チケット・獲得pt予測・メモの設定をクリアします。よろしいですか？")) return;
+        picker.hidePopover();
+        Object.keys(settings).forEach((key) => { delete settings[key]; });
+        dayStates.forEach((state, index) => { dayStates[index] = defaultState(index); });
+        selectedRankDate = "";
+        render();
+        try {
+          localStorage.removeItem(storageKey);
+          localStorage.removeItem(`${storageKey}-rank-date`);
+          saveStatus.textContent = "設定をクリアしました";
+        } catch {
+          saveStatus.textContent = "画面の設定はクリアしましたが、保存済みデータを削除できませんでした";
+        }
+      });
+
+      render();
+    })();
+  </script>
+</body>
+</html>
